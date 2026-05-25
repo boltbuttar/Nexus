@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Send, Phone, Video, Info, Smile } from 'lucide-react';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
@@ -8,33 +8,49 @@ import { ChatMessage } from '../../components/chat/ChatMessage';
 import { ChatUserList } from '../../components/chat/ChatUserList';
 import { useAuth } from '../../context/AuthContext';
 import { Message } from '../../types';
-import { findUserById } from '../../data/users';
-import { getMessagesBetweenUsers, sendMessage, getConversationsForUser } from '../../data/messages';
+import { getUser } from '../../api/users';
+import { getConversations, getMessagesWith, sendMessage as sendMessageRequest } from '../../api/messages';
 import { MessageCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export const ChatPage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
+  const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [conversations, setConversations] = useState<any[]>([]);
+  const [chatPartner, setChatPartner] = useState<any | null>(null);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
-  
-  const chatPartner = userId ? findUserById(userId) : null;
   
   useEffect(() => {
     // Load conversations
     if (currentUser) {
-      setConversations(getConversationsForUser(currentUser.id));
+      getConversations()
+        .then(({ conversations }) => setConversations(conversations))
+        .catch(() => toast.error('Failed to load conversations'));
     }
   }, [currentUser]);
   
   useEffect(() => {
     // Load messages between users
     if (currentUser && userId) {
-      setMessages(getMessagesBetweenUsers(currentUser.id, userId));
+      getMessagesWith(userId)
+        .then(({ messages }) => setMessages(messages as Message[]))
+        .catch(() => toast.error('Failed to load messages'));
     }
   }, [currentUser, userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      setChatPartner(null);
+      return;
+    }
+
+    getUser(userId)
+      .then(({ user }) => setChatPartner(user))
+      .catch(() => toast.error('Failed to load chat partner'));
+  }, [userId]);
   
   useEffect(() => {
     // Scroll to bottom of messages
@@ -46,17 +62,14 @@ export const ChatPage: React.FC = () => {
     
     if (!newMessage.trim() || !currentUser || !userId) return;
     
-    const message = sendMessage({
-      senderId: currentUser.id,
-      receiverId: userId,
-      content: newMessage
-    });
-    
-    setMessages([...messages, message]);
-    setNewMessage('');
-    
-    // Update conversations
-    setConversations(getConversationsForUser(currentUser.id));
+    sendMessageRequest(userId, newMessage)
+      .then(({ message }) => {
+        setMessages([...messages, message]);
+        setNewMessage('');
+        return getConversations();
+      })
+      .then(({ conversations }) => setConversations(conversations))
+      .catch(() => toast.error('Failed to send message'));
   };
   
   if (!currentUser) return null;
@@ -106,6 +119,11 @@ export const ChatPage: React.FC = () => {
                   size="sm"
                   className="rounded-full p-2"
                   aria-label="Video call"
+                  onClick={() => {
+                    if (!currentUser || !userId) return;
+                    const roomId = [currentUser.id, userId].sort().join('-');
+                    navigate(`/video?room=${roomId}`);
+                  }}
                 >
                   <Video size={18} />
                 </Button>

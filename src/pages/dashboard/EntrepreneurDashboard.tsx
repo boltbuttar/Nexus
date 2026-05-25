@@ -8,28 +8,39 @@ import { CollaborationRequestCard } from '../../components/collaboration/Collabo
 import { InvestorCard } from '../../components/investor/InvestorCard';
 import { useAuth } from '../../context/AuthContext';
 import { CollaborationRequest } from '../../types';
-import { getRequestsForEntrepreneur } from '../../data/collaborationRequests';
-import { investors } from '../../data/users';
+import { getRequestsForEntrepreneur, updateRequestStatus } from '../../api/collaboration';
+import { getUsers } from '../../api/users';
+import { Investor } from '../../types';
+import toast from 'react-hot-toast';
 
 export const EntrepreneurDashboard: React.FC = () => {
   const { user } = useAuth();
   const [collaborationRequests, setCollaborationRequests] = useState<CollaborationRequest[]>([]);
-  const [recommendedInvestors, setRecommendedInvestors] = useState(investors.slice(0, 3));
+  const [recommendedInvestors, setRecommendedInvestors] = useState<Investor[]>([]);
   
   useEffect(() => {
     if (user) {
-      // Load collaboration requests
-      const requests = getRequestsForEntrepreneur(user.id);
-      setCollaborationRequests(requests);
+      getRequestsForEntrepreneur(user.id)
+        .then(({ requests }) => setCollaborationRequests(requests as CollaborationRequest[]))
+        .catch(() => toast.error('Failed to load collaboration requests'));
     }
   }, [user]);
+
+  useEffect(() => {
+    getUsers('investor')
+      .then(({ users }) => setRecommendedInvestors((users as Investor[]).slice(0, 3)))
+      .catch(() => toast.error('Failed to load recommended investors'));
+  }, []);
   
-  const handleRequestStatusUpdate = (requestId: string, status: 'accepted' | 'rejected') => {
-    setCollaborationRequests(prevRequests => 
-      prevRequests.map(req => 
-        req.id === requestId ? { ...req, status } : req
-      )
-    );
+  const handleRequestStatusUpdate = async (requestId: string, status: 'accepted' | 'rejected') => {
+    try {
+      const { request } = await updateRequestStatus(requestId, status);
+      setCollaborationRequests(prevRequests =>
+        prevRequests.map(req => (req.id === requestId ? request : req))
+      );
+    } catch (error) {
+      toast.error('Failed to update request status');
+    }
   };
   
   if (!user) return null;

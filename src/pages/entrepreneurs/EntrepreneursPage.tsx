@@ -1,15 +1,39 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search, Filter, MapPin } from 'lucide-react';
 import { Input } from '../../components/ui/Input';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { EntrepreneurCard } from '../../components/entrepreneur/EntrepreneurCard';
-import { entrepreneurs } from '../../data/users';
+import { Entrepreneur } from '../../types';
+import { getUsers } from '../../api/users';
+import toast from 'react-hot-toast';
 
 export const EntrepreneursPage: React.FC = () => {
+  const [entrepreneurs, setEntrepreneurs] = useState<Entrepreneur[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [selectedFundingRange, setSelectedFundingRange] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    getUsers('entrepreneur')
+      .then(({ users }) => {
+        if (isMounted) {
+          setEntrepreneurs(users as Entrepreneur[]);
+        }
+      })
+      .catch(() => toast.error('Failed to load entrepreneurs'))
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   
   // Get unique industries and funding ranges
   const allIndustries = Array.from(new Set(entrepreneurs.map(e => e.industry)));
@@ -58,6 +82,14 @@ export const EntrepreneursPage: React.FC = () => {
     );
   };
   
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>

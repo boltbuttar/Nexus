@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { User, Lock, Bell, Globe, Palette, CreditCard } from 'lucide-react';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
@@ -6,11 +6,73 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Avatar } from '../../components/ui/Avatar';
 import { useAuth } from '../../context/AuthContext';
+import toast from 'react-hot-toast';
+import { requestOtp, verifyOtp } from '../../api/auth';
 
 export const SettingsPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, updateProfile, refreshUser, changePassword } = useAuth();
+  const [isSaving, setIsSaving] = useState(false);
+  const [otpRequested, setOtpRequested] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const initialProfile = useMemo(() => ({
+    name: user?.name || '',
+    email: user?.email || '',
+    location: (user as any)?.location || '',
+    bio: user?.bio || ''
+  }), [user]);
+  const [profileForm, setProfileForm] = useState(initialProfile);
+  const isTwoFactorEnabled = Boolean(user?.twoFactorEnabled);
+
+  useEffect(() => {
+    setProfileForm(initialProfile);
+  }, [initialProfile]);
   
   if (!user) return null;
+
+  const handleSaveProfile = async () => {
+    setIsSaving(true);
+    try {
+      await updateProfile(user.id, {
+        name: profileForm.name,
+        bio: profileForm.bio,
+        location: profileForm.location
+      } as any);
+      toast.success('Profile updated');
+    } catch (error) {
+      toast.error('Failed to update profile');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error('Fill out all password fields');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      await changePassword(currentPassword, newPassword);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      toast.error('Failed to update password');
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
   
   return (
     <div className="space-y-6 animate-fade-in">
@@ -85,13 +147,15 @@ export const SettingsPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Input
                   label="Full Name"
-                  defaultValue={user.name}
+                  value={profileForm.name}
+                  onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))}
                 />
                 
                 <Input
                   label="Email"
                   type="email"
-                  defaultValue={user.email}
+                  value={profileForm.email}
+                  disabled
                 />
                 
                 <Input
@@ -102,7 +166,8 @@ export const SettingsPage: React.FC = () => {
                 
                 <Input
                   label="Location"
-                  defaultValue="San Francisco, CA"
+                  value={profileForm.location}
+                  onChange={(e) => setProfileForm(prev => ({ ...prev, location: e.target.value }))}
                 />
               </div>
               
@@ -113,13 +178,16 @@ export const SettingsPage: React.FC = () => {
                 <textarea
                   className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
                   rows={4}
-                  defaultValue={user.bio}
+                  value={profileForm.bio}
+                  onChange={(e) => setProfileForm(prev => ({ ...prev, bio: e.target.value }))}
                 ></textarea>
               </div>
               
               <div className="flex justify-end gap-3">
                 <Button variant="outline">Cancel</Button>
-                <Button>Save Changes</Button>
+                <Button onClick={handleSaveProfile} disabled={isSaving}>
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </Button>
               </div>
             </CardBody>
           </Card>
@@ -137,10 +205,58 @@ export const SettingsPage: React.FC = () => {
                     <p className="text-sm text-gray-600">
                       Add an extra layer of security to your account
                     </p>
-                    <Badge variant="error" className="mt-1">Not Enabled</Badge>
+                    <Badge variant={isTwoFactorEnabled ? 'success' : 'error'} className="mt-1">
+                      {isTwoFactorEnabled ? 'Enabled' : 'Not Enabled'}
+                    </Badge>
                   </div>
-                  <Button variant="outline">Enable</Button>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      try {
+                        await requestOtp();
+                        setOtpRequested(true);
+                        toast.success('Verification code sent');
+                      } catch (error) {
+                        toast.error('Failed to send verification code');
+                      }
+                    }}
+                  >
+                    Enable
+                  </Button>
                 </div>
+                {otpRequested && (
+                  <div className="mt-4 flex flex-col md:flex-row gap-3">
+                    <Input
+                      label="Verification Code"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value)}
+                    />
+                    <Button
+                      variant="primary"
+                      onClick={async () => {
+                        if (!otpCode) {
+                          toast.error('Enter the code');
+                          return;
+                        }
+                        setIsVerifyingOtp(true);
+                        try {
+                          await verifyOtp(otpCode);
+                          await refreshUser();
+                          toast.success('Two-factor enabled');
+                          setOtpRequested(false);
+                          setOtpCode('');
+                        } catch (error) {
+                          toast.error('Invalid or expired code');
+                        } finally {
+                          setIsVerifyingOtp(false);
+                        }
+                      }}
+                      disabled={isVerifyingOtp}
+                    >
+                      {isVerifyingOtp ? 'Verifying...' : 'Verify'}
+                    </Button>
+                  </div>
+                )}
               </div>
               
               <div className="pt-6 border-t border-gray-200">
@@ -149,20 +265,31 @@ export const SettingsPage: React.FC = () => {
                   <Input
                     label="Current Password"
                     type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
                   />
                   
                   <Input
                     label="New Password"
                     type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
                   />
                   
                   <Input
                     label="Confirm New Password"
                     type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    error={newPassword && confirmPassword && newPassword !== confirmPassword
+                      ? 'Passwords do not match'
+                      : undefined}
                   />
                   
                   <div className="flex justify-end">
-                    <Button>Update Password</Button>
+                    <Button onClick={handleChangePassword} disabled={isUpdatingPassword}>
+                      {isUpdatingPassword ? 'Updating...' : 'Update Password'}
+                    </Button>
                   </div>
                 </div>
               </div>

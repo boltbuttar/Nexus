@@ -1,15 +1,39 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search, Filter, MapPin } from 'lucide-react';
 import { Input } from '../../components/ui/Input';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { InvestorCard } from '../../components/investor/InvestorCard';
-import { investors } from '../../data/users';
+import { Investor } from '../../types';
+import { getUsers } from '../../api/users';
+import toast from 'react-hot-toast';
 
 export const InvestorsPage: React.FC = () => {
+  const [investors, setInvestors] = useState<Investor[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStages, setSelectedStages] = useState<string[]>([]);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    getUsers('investor')
+      .then(({ users }) => {
+        if (isMounted) {
+          setInvestors(users as Investor[]);
+        }
+      })
+      .catch(() => toast.error('Failed to load investors'))
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   
   // Get unique investment stages and interests
   const allStages = Array.from(new Set(investors.flatMap(i => i.investmentStage)));
@@ -49,6 +73,14 @@ export const InvestorsPage: React.FC = () => {
     );
   };
   
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>

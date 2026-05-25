@@ -1,0 +1,350 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Nexus API",
+    "version": "1.0.0",
+    "description": "Backend API for the Nexus investor & entrepreneur collaboration platform."
+  },
+  "servers": [
+    { "url": "http://localhost:5000/api" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "AuthPayload": {
+        "type": "object",
+        "properties": {
+          "token": { "type": "string" },
+          "user": { "$ref": "#/components/schemas/User" }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string" },
+          "role": { "type": "string", "enum": ["entrepreneur", "investor"] },
+          "bio": { "type": "string" },
+          "avatarUrl": { "type": "string" },
+          "twoFactorEnabled": { "type": "boolean" }
+        }
+      },
+      "Meeting": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "organizerId": { "type": "string" },
+          "participantId": { "type": "string" },
+          "title": { "type": "string" },
+          "startTime": { "type": "string", "format": "date-time" },
+          "endTime": { "type": "string", "format": "date-time" },
+          "status": { "type": "string", "enum": ["pending", "accepted", "rejected", "cancelled"] }
+        }
+      },
+      "Document": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "type": "string" },
+          "size": { "type": "string" },
+          "mimeType": { "type": "string" },
+          "url": { "type": "string" },
+          "shared": { "type": "boolean" },
+          "status": { "type": "string", "enum": ["draft", "signed"] },
+          "signatureUrl": { "type": "string" }
+        }
+      },
+      "Transaction": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string", "enum": ["deposit", "withdraw", "transfer"] },
+          "amount": { "type": "number" },
+          "currency": { "type": "string" },
+          "status": { "type": "string", "enum": ["pending", "completed", "failed"] }
+        }
+      }
+    }
+  },
+  "security": [
+    { "bearerAuth": [] }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "security": [],
+        "summary": "Register a user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password", "role"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string" },
+                  "password": { "type": "string" },
+                  "role": { "type": "string", "enum": ["entrepreneur", "investor"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Registered", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthPayload" } } } }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "security": [],
+        "summary": "Login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string" },
+                  "password": { "type": "string" },
+                  "role": { "type": "string", "enum": ["entrepreneur", "investor"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthPayload" } } } }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "summary": "Get current user",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "user": { "$ref": "#/components/schemas/User" } } } } } }
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "security": [],
+        "summary": "Request password reset",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "type": "object", "properties": { "email": { "type": "string" } } } }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "security": [],
+        "summary": "Reset password",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "type": "object", "properties": { "token": { "type": "string" }, "newPassword": { "type": "string" } } } }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/auth/change-password": {
+      "post": {
+        "summary": "Change password",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "type": "object", "properties": { "currentPassword": { "type": "string" }, "newPassword": { "type": "string" } } } }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/auth/request-otp": {
+      "post": {
+        "summary": "Request OTP",
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/auth/verify-otp": {
+      "post": {
+        "summary": "Verify OTP",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "type": "object", "properties": { "code": { "type": "string" } } } }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/users": {
+      "get": {
+        "summary": "List users",
+        "parameters": [
+          { "name": "role", "in": "query", "schema": { "type": "string" } },
+          { "name": "search", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "summary": "Get user by id",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/users/me": {
+      "patch": {
+        "summary": "Update current user profile",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object" } } }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/meetings": {
+      "get": { "summary": "List meetings", "responses": { "200": { "description": "OK" } } },
+      "post": {
+        "summary": "Create meeting",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Meeting" } } }
+        },
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/meetings/{id}/status": {
+      "patch": {
+        "summary": "Update meeting status",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "status": { "type": "string" } } } } }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/documents": {
+      "get": { "summary": "List documents", "responses": { "200": { "description": "OK" } } }
+    },
+    "/documents/upload": {
+      "post": {
+        "summary": "Upload document",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": { "file": { "type": "string", "format": "binary" } }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/documents/{id}": {
+      "get": { "summary": "Get document", "responses": { "200": { "description": "OK" } } },
+      "patch": { "summary": "Update document", "responses": { "200": { "description": "OK" } } },
+      "delete": { "summary": "Delete document", "responses": { "200": { "description": "OK" } } }
+    },
+    "/documents/{id}/download": {
+      "get": { "summary": "Download document", "responses": { "200": { "description": "OK" } } }
+    },
+    "/documents/{id}/signature": {
+      "post": {
+        "summary": "Upload signature",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": { "signature": { "type": "string", "format": "binary" } }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/messages/conversations": {
+      "get": { "summary": "List conversations", "responses": { "200": { "description": "OK" } } }
+    },
+    "/messages/with/{userId}": {
+      "get": {
+        "summary": "List messages with user",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/messages": {
+      "post": {
+        "summary": "Send message",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "receiverId": { "type": "string" }, "content": { "type": "string" } } } } }
+        },
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/payments/transactions": {
+      "get": { "summary": "List transactions", "responses": { "200": { "description": "OK" } } }
+    },
+    "/payments/deposit": {
+      "post": {
+        "summary": "Create deposit",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "amount": { "type": "number" }, "currency": { "type": "string" } } } } }
+        },
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/payments/withdraw": {
+      "post": {
+        "summary": "Create withdrawal",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "amount": { "type": "number" }, "currency": { "type": "string" } } } } }
+        },
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/payments/transfer": {
+      "post": {
+        "summary": "Create transfer",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "amount": { "type": "number" }, "receiverId": { "type": "string" }, "currency": { "type": "string" } } } } }
+        },
+        "responses": { "201": { "description": "Created" } }
+      }
+    }
+  }
+}

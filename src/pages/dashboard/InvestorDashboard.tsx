@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, PieChart, Filter, Search, PlusCircle } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
@@ -8,18 +8,31 @@ import { Badge } from '../../components/ui/Badge';
 import { EntrepreneurCard } from '../../components/entrepreneur/EntrepreneurCard';
 import { useAuth } from '../../context/AuthContext';
 import { Entrepreneur } from '../../types';
-import { entrepreneurs } from '../../data/users';
-import { getRequestsFromInvestor } from '../../data/collaborationRequests';
+import { getUsers } from '../../api/users';
+import { getRequestsFromInvestor } from '../../api/collaboration';
+import toast from 'react-hot-toast';
 
 export const InvestorDashboard: React.FC = () => {
   const { user } = useAuth();
+  const [entrepreneurs, setEntrepreneurs] = useState<Entrepreneur[]>([]);
+  const [sentRequests, setSentRequests] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   
   if (!user) return null;
   
-  // Get collaboration requests sent by this investor
-  const sentRequests = getRequestsFromInvestor(user.id);
+  useEffect(() => {
+    if (!user) return;
+
+    getUsers('entrepreneur')
+      .then(({ users }) => setEntrepreneurs(users as Entrepreneur[]))
+      .catch(() => toast.error('Failed to load entrepreneurs'));
+
+    getRequestsFromInvestor(user.id)
+      .then(({ requests }) => setSentRequests(requests))
+      .catch(() => toast.error('Failed to load collaboration requests'));
+  }, [user]);
+
   const requestedEntrepreneurIds = sentRequests.map(req => req.entrepreneurId);
   
   // Filter entrepreneurs based on search and industry filters

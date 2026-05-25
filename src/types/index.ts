@@ -8,6 +8,7 @@ export interface User {
   avatarUrl: string;
   bio: string;
   isOnline?: boolean;
+  twoFactorEnabled?: boolean;
   createdAt: string;
 }
 
@@ -62,10 +63,38 @@ export interface Document {
   name: string;
   type: string;
   size: string;
-  lastModified: string;
+  mimeType?: string;
   shared: boolean;
   url: string;
   ownerId: string;
+  status?: 'draft' | 'signed';
+  signatureUrl?: string;
+  version?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Meeting {
+  id: string;
+  organizerId: string;
+  participantId: string;
+  title: string;
+  notes?: string;
+  location?: string;
+  timeZone?: string;
+  startTime: string;
+  endTime: string;
+  status: 'pending' | 'accepted' | 'rejected' | 'cancelled';
+}
+
+export interface Transaction {
+  id: string;
+  userId: string;
+  type: 'deposit' | 'withdraw' | 'transfer';
+  amount: number;
+  currency: string;
+  status: 'pending' | 'completed' | 'failed';
+  createdAt: string;
 }
 
 export interface AuthContextType {
@@ -75,7 +104,9 @@ export interface AuthContextType {
   logout: () => void;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, newPassword: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   updateProfile: (userId: string, updates: Partial<User>) => Promise<void>;
+  refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
 }

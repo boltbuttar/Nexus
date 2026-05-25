@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { MessageCircle, Users, Calendar, Building2, MapPin, UserCircle, FileText, DollarSign, Send } from 'lucide-react';
 import { Avatar } from '../../components/ui/Avatar';
@@ -6,17 +6,61 @@ import { Button } from '../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { useAuth } from '../../context/AuthContext';
-import { findUserById } from '../../data/users';
-import { createCollaborationRequest, getRequestsFromInvestor } from '../../data/collaborationRequests';
+import { getUser } from '../../api/users';
+import { createCollaborationRequest, getRequestsFromInvestor } from '../../api/collaboration';
 import { Entrepreneur } from '../../types';
+import toast from 'react-hot-toast';
 
 export const EntrepreneurProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user: currentUser } = useAuth();
+  const [entrepreneur, setEntrepreneur] = useState<Entrepreneur | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasRequestedCollaboration, setHasRequestedCollaboration] = useState(false);
   
-  // Fetch entrepreneur data
-  const entrepreneur = findUserById(id || '') as Entrepreneur | null;
+  useEffect(() => {
+    if (!id) return;
+    let isMounted = true;
+
+    setIsLoading(true);
+    getUser(id)
+      .then(({ user }) => {
+        if (isMounted) {
+          setEntrepreneur(user as Entrepreneur);
+        }
+      })
+      .catch(() => toast.error('Failed to load entrepreneur profile'))
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  const isInvestor = currentUser?.role === 'investor';
+
+  useEffect(() => {
+    if (!isInvestor || !currentUser || !id) return;
+    getRequestsFromInvestor(currentUser.id)
+      .then(({ requests }) => {
+        const hasRequested = requests.some((req: any) => req.entrepreneurId === id);
+        setHasRequestedCollaboration(hasRequested);
+      })
+      .catch(() => toast.error('Failed to load collaboration status'));
+  }, [currentUser, id, isInvestor]);
   
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
   if (!entrepreneur || entrepreneur.role !== 'entrepreneur') {
     return (
       <div className="text-center py-12">
@@ -30,24 +74,19 @@ export const EntrepreneurProfile: React.FC = () => {
   }
   
   const isCurrentUser = currentUser?.id === entrepreneur.id;
-  const isInvestor = currentUser?.role === 'investor';
-  
-  // Check if the current investor has already sent a request to this entrepreneur
-  const hasRequestedCollaboration = isInvestor && id 
-    ? getRequestsFromInvestor(currentUser.id).some(req => req.entrepreneurId === id)
-    : false;
   
   const handleSendRequest = () => {
     if (isInvestor && currentUser && id) {
-      createCollaborationRequest(
-        currentUser.id,
-        id,
-        `I'm interested in learning more about ${entrepreneur.startupName} and would like to explore potential investment opportunities.`
-      );
-      
-      // In a real app, we would refresh the data or update state
-      // For this demo, we'll force a page reload
-      window.location.reload();
+      createCollaborationRequest({
+        investorId: currentUser.id,
+        entrepreneurId: id,
+        message: `I'm interested in learning more about ${entrepreneur.startupName} and would like to explore potential investment opportunities.`
+      })
+        .then(() => {
+          setHasRequestedCollaboration(true);
+          toast.success('Request sent');
+        })
+        .catch(() => toast.error('Failed to send request'));
     }
   };
   

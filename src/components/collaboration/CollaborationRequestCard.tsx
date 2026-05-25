@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, X, MessageCircle } from 'lucide-react';
 import { CollaborationRequest } from '../../types';
@@ -6,9 +6,9 @@ import { Card, CardBody, CardFooter } from '../ui/Card';
 import { Avatar } from '../ui/Avatar';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
-import { findUserById } from '../../data/users';
-import { updateRequestStatus } from '../../data/collaborationRequests';
+import { getUser } from '../../api/users';
 import { formatDistanceToNow } from 'date-fns';
+import toast from 'react-hot-toast';
 
 interface CollaborationRequestCardProps {
   request: CollaborationRequest;
@@ -20,19 +20,32 @@ export const CollaborationRequestCard: React.FC<CollaborationRequestCardProps> =
   onStatusUpdate
 }) => {
   const navigate = useNavigate();
-  const investor = findUserById(request.investorId);
+  const [investor, setInvestor] = useState<any | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    getUser(request.investorId)
+      .then(({ user }) => {
+        if (isMounted) {
+          setInvestor(user);
+        }
+      })
+      .catch(() => toast.error('Failed to load investor details'));
+
+    return () => {
+      isMounted = false;
+    };
+  }, [request.investorId]);
   
   if (!investor) return null;
   
   const handleAccept = () => {
-    updateRequestStatus(request.id, 'accepted');
     if (onStatusUpdate) {
       onStatusUpdate(request.id, 'accepted');
     }
   };
   
   const handleReject = () => {
-    updateRequestStatus(request.id, 'rejected');
     if (onStatusUpdate) {
       onStatusUpdate(request.id, 'rejected');
     }

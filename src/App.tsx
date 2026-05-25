@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { RequireRole } from './components/auth/RequireRole';
 
 // Layouts
 import { DashboardLayout } from './components/layout/DashboardLayout';
@@ -26,6 +27,9 @@ import { DocumentsPage } from './pages/documents/DocumentsPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
 import { HelpPage } from './pages/help/HelpPage';
 import { DealsPage } from './pages/deals/DealsPage';
+import { MeetingsPage } from './pages/meetings/MeetingsPage';
+import { PaymentsPage } from './pages/payments/PaymentsPage';
+import { VideoCallPage } from './pages/video/VideoCallPage';
 
 // Chat Pages
 import { ChatPage } from './pages/chat/ChatPage';
@@ -41,8 +45,22 @@ function App() {
           
           {/* Dashboard Routes */}
           <Route path="/dashboard" element={<DashboardLayout />}>
-            <Route path="entrepreneur" element={<EntrepreneurDashboard />} />
-            <Route path="investor" element={<InvestorDashboard />} />
+            <Route
+              path="entrepreneur"
+              element={(
+                <RequireRole role="entrepreneur">
+                  <EntrepreneurDashboard />
+                </RequireRole>
+              )}
+            />
+            <Route
+              path="investor"
+              element={(
+                <RequireRole role="investor">
+                  <InvestorDashboard />
+                </RequireRole>
+              )}
+            />
           </Route>
           
           {/* Profile Routes */}
@@ -53,11 +71,25 @@ function App() {
           
           {/* Feature Routes */}
           <Route path="/investors" element={<DashboardLayout />}>
-            <Route index element={<InvestorsPage />} />
+            <Route
+              index
+              element={(
+                <RequireRole role="entrepreneur">
+                  <InvestorsPage />
+                </RequireRole>
+              )}
+            />
           </Route>
           
           <Route path="/entrepreneurs" element={<DashboardLayout />}>
-            <Route index element={<EntrepreneursPage />} />
+            <Route
+              index
+              element={(
+                <RequireRole role="investor">
+                  <EntrepreneursPage />
+                </RequireRole>
+              )}
+            />
           </Route>
           
           <Route path="/messages" element={<DashboardLayout />}>
@@ -70,6 +102,18 @@ function App() {
           
           <Route path="/documents" element={<DashboardLayout />}>
             <Route index element={<DocumentsPage />} />
+          </Route>
+
+          <Route path="/meetings" element={<DashboardLayout />}>
+            <Route index element={<MeetingsPage />} />
+          </Route>
+
+          <Route path="/payments" element={<DashboardLayout />}>
+            <Route index element={<PaymentsPage />} />
+          </Route>
+
+          <Route path="/video" element={<DashboardLayout />}>
+            <Route index element={<VideoCallPage />} />
           </Route>
           
           <Route path="/settings" element={<DashboardLayout />}>
