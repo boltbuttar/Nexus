@@ -26,6 +26,9 @@ Nexus is a full-stack platform that connects investors and entrepreneurs with co
 3) Configure environment files:
    - Frontend: copy `.env.example` to `.env`
    - Backend: copy `server/.env.example` to `server/.env`
+4) Seed demo users (optional):
+   - `cd server`
+   - `npm run seed`
 4) Start backend:
    - `cd server`
    - `npm run dev`
@@ -44,6 +47,9 @@ Nexus is a full-stack platform that connects investors and entrepreneurs with co
 
 ## Deployment
 - Deployment guide: [docs/deployment.md](docs/deployment.md)
+
+## Live Deployment
+- Frontend: https://nexus-eight-peach.vercel.app
 
 ## Demo
 - Presentation outline: [docs/demo-presentation.md](docs/demo-presentation.md)
