@@ -29,6 +29,7 @@ const swaggerDocument = JSON.parse(
   fs.readFileSync(new URL('./docs/openapi.json', import.meta.url), 'utf-8')
 );
 
+app.set('trust proxy', 1);
 app.use(cors({ origin: env.clientOrigin, credentials: true }));
 app.use(helmet());
 app.use(morgan('dev'));
