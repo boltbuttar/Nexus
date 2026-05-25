@@ -50,3 +50,9 @@ Base URL: `http://localhost:5000/api`
 
 ## Docs
 - `GET /docs` Swagger UI (served at `/api/docs`)
+
+## Postman
+- Collection: `docs/postman/Nexus.postman_collection.json`
+
+## Feature Map
+- Frontend to API map: `docs/feature-api-map.md`

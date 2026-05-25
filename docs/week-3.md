@@ -3,10 +3,11 @@
 ## Summary
 - Added payments endpoints for deposits, withdrawals, and transfers.
 - Implemented mock Stripe integration (optional via STRIPE_SECRET).
-- Strengthened security with validation, sanitization, JWT auth, bcrypt hashing, and 2FA OTP flow.
+- Strengthened security with validation, XSS sanitization, JWT auth, bcrypt hashing, and 2FA OTP flow.
 - Added calendar view for meetings and PDF preview for documents.
 - Added change-password flow and role-based route guards.
 - Added Swagger UI at /api/docs for API documentation.
+- Added deployment guide and demo presentation outline.
 
 ## Backend
 - Payments API: deposit, withdraw, transfer, and transaction history.

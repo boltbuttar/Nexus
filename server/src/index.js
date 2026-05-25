@@ -19,6 +19,7 @@ import meetingRoutes from './routes/meetings.js';
 import documentRoutes from './routes/documents.js';
 import paymentRoutes from './routes/payments.js';
 import messageRoutes from './routes/messages.js';
+import { sanitizeRequest } from './middleware/sanitize.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 const app = express();
@@ -35,6 +36,7 @@ app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 300 }));
 app.use(mongoSanitize());
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: false }));
+app.use(sanitizeRequest);
 
 app.use('/uploads', express.static(path.resolve(env.uploadDir)));
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));

@@ -6,6 +6,7 @@
 - Wired frontend authentication and profile screens to backend APIs.
 - Replaced mock collaboration requests, users, and messages with API-backed data.
 - Added document API wiring and basic upload/download actions.
+- Documented frontend-to-backend API mapping.
 
 ## Backend (server)
 - New Express server in server/ with MongoDB (Mongoose).
@@ -39,3 +40,4 @@
 - Default API base URL: http://localhost:5000/api
 - Default frontend URL: http://localhost:5173
 - Uploaded files are stored in server/uploads (local development).
+- Feature/API map: docs/feature-api-map.md
